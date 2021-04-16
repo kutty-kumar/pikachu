@@ -1,0 +1,102 @@
+version: '3.7'
+
+services:
+  mysql:
+    container_name: mysql
+    image: mysql:8.0
+    command: mysqld --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pikachu
+      MYSQL_USER: sandbox_user
+      MYSQL_PASSWORD: passpass
+    restart: unless-stopped
+    volumes:
+      - './docker/db/data:/var/lib/mysql'
+      - './docker/db/my.cnf:/etc/mysql/conf.d/my.cnf'
+      - './docker/db/sql:/docker-entrypoint-initdb.d'
+    ports:
+      - '3306:3306'
+    networks:
+      - dev
+
+  consul:
+    container_name: consul
+    image: consul:latest
+    ports:
+      - "8500:8500"
+      - "8300:8300"
+    volumes:
+      - ./docker/config:/config
+      - ./docker/_data/consul:/data
+    command: agent -server -data-dir=/data -bind 0.0.0.0 -client 0.0.0.0 -bootstrap-expect=1
+    networks:
+      - dev
+
+  consul_init:
+    image: consul
+    command: |
+      sh -c 'set -uex; \
+         consul kv put -http-addr=http://consul:8500 @./default_config.json'
+    volumes:
+      - './default_config.json:/consul/config/basic_config.json'
+    networks:
+      - dev
+
+#  vault:
+#    container_name: vault
+#    image: vault
+#    links:
+#      - consul:consul
+#    depends_on:
+#      - consul
+#    ports:
+#      - "8200:8200"
+#    volumes_from:
+#      - consul
+#    cap_add:
+#      - IPC_LOCK
+#    command: server -config=./docker/config/vault.hcl
+#      networks:
+#        - dev
+
+#  webui:
+#    container_name: webui
+#    image: djenriquez/vault-ui
+#    ports:
+#      - "8000:8000"
+#    links:
+#      - vault:vault
+#    environment:
+#      NODE_TLS_REJECT_UNAUTHORIZED: 0
+#      VAULT_URL_DEFAULT: https://vault:8200
+#      networks:
+#        - dev
+
+  pikachu:
+    container_name: pikachu
+    image: pikachu:f1ce796
+    restart: unless-stopped
+    env_file:
+      - env/pikachu.env
+    environment:
+      - PROM_METRIC_NAME_PREFIX=pikachu_
+    command: /bin/server
+    ports:
+      - "7000:7000"
+      - "7001:7001"
+      - "7002:7002"
+    depends_on:
+      - mysql
+      - consul
+      - consul_init
+    links:
+      - mysql:mysql
+      - consul:consul
+      - consul_init:consul_init
+    networks:
+      - dev
+
+networks:
+  dev:
+    external: true

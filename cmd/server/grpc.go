@@ -25,8 +25,8 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 	grpcServer := grpc.NewServer(
 		grpc.KeepaliveParams(
 			keepalive.ServerParameters{
-				Time:    time.Duration(viper.GetInt("config.keepalive.time")) * time.Second,
-				Timeout: time.Duration(viper.GetInt("config.keepalive.timeout")) * time.Second,
+				Time:    time.Duration(viper.GetInt("heart_beat_config.keep_alive_time")) * time.Second,
+				Timeout: time.Duration(viper.GetInt("heart_beat_config.keep_alive_timeout")) * time.Second,
 			},
 		),
 		grpc.UnaryInterceptor(
@@ -51,14 +51,14 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 	)
 
 	// create new postgres database
-	db, err := gorm.Open("mysql", dbConnectionString)
+	db, err := gorm.Open(viper.GetString("database_config.type"), dbConnectionString)
 	db.LogMode(true)
 	if err != nil {
 		return nil, err
 	}
 
-	dropTables(db)
-	createTables(db)
+	//dropTables(db)
+	//createTables(db)
 
 	domainFactory := db_commons.NewDomainFactory()
 	domainFactory.RegisterMapping("user", func() db_commons.Base {

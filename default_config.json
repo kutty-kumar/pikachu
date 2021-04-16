@@ -1,0 +1,31 @@
+{
+  "pikachu": {
+    "database_config": {
+      "host_name": "mysql",
+      "port": 3306,
+      "database_name": "pikachu",
+      "user_name": "root",
+      "password": "root"
+    },
+    "heart_beat_config": {
+      "keep_alive_time": 10,
+      "keep_alive_time_out": 20
+    },
+    "logging_config": {
+      "log_level": "debug"
+    },
+    "server_config": {
+      "address": "0.0.0.0",
+      "port": "7000",
+      "gateway_enable": true,
+      "gateway_address": "0.0.0.0",
+      "gateway_url": "/pikachu",
+      "gateway_port": "7001",
+      "internal_enable": true,
+      "internal_address": "0.0.0.0",
+      "internal_port": "7002",
+      "internal_health": "/health",
+      "internal_readiness": "/readiness"
+    }
+  }
+}

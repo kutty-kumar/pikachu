@@ -7,3 +7,4 @@ vendor/
 *.log
 *.iml
 .DS_STORE/
+docker/db/data

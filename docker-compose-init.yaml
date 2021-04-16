@@ -1,0 +1,32 @@
+version: "3.7"
+
+services:
+  consul_init:
+    image: consul
+    command: |
+      sh -c 'set -uex; \
+         consul kv put -http-addr=http://consul:8500 config/init true'
+    volumes:
+      - './default_config.json:/consul/config/basic_config.json'
+    networks:
+      - dev
+
+  set:
+    image: consul
+    entrypoint: consul kv put -http-addr=http://consul:8500
+    volumes:
+      - './default_config.json:/consul/config/basic_config.json'
+    networks:
+      - dev
+
+  get:
+    image: consul
+    entrypoint: consul kv get -http-addr=http://consul:8500
+    volumes:
+      - './default_config.json:/consul/config/basic_config.json'
+    networks:
+      - dev
+
+networks:
+  dev:
+    external: false

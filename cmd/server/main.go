@@ -21,15 +21,21 @@ import (
 	"github.com/infobloxopen/atlas-app-toolkit/server"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
+)
+
+var (
+	configProviderKey    = "CONFIG_PROVIDER"
+	configSvcEndpointKey = "CONFIG_ENDPOINT"
+	configPathKey        = "CONFIG_PATH"
 )
 
 func main() {
 	doneC := make(chan error)
 	logger := NewLogger()
 
-	if viper.GetBool("internal.enable") {
+	if viper.GetBool("server_config.internal_enable") {
 		go func() { doneC <- ServeInternal(logger) }()
 	}
 
@@ -53,8 +59,8 @@ func NewLogger() *logrus.Logger {
 		"fatal":   logrus.FatalLevel,
 		"panic":   logrus.PanicLevel,
 	}
-	if level, ok := logLevels[viper.GetString("logging.level")]; !ok {
-		logger.Errorf("Invalid %q provided for log level", viper.GetString("logging.level"))
+	if level, ok := logLevels[viper.GetString("logging_config.log_level")]; !ok {
+		logger.Errorf("Invalid %q provided for log level", viper.GetString("logging_config.log_level"))
 		logger.SetLevel(logrus.InfoLevel)
 	} else {
 		logger.SetLevel(level)
@@ -66,12 +72,12 @@ func NewLogger() *logrus.Logger {
 // ServeInternal builds and runs the server that listens on InternalAddress
 func ServeInternal(logger *logrus.Logger) error {
 	healthChecker := health.NewChecksHandler(
-		viper.GetString("internal.health"),
-		viper.GetString("internal.readiness"),
+		viper.GetString("server_config.internal_health"),
+		viper.GetString("server_config.internal_readiness"),
 	)
 	healthChecker.AddReadiness("DB ready check", dbReady)
 	healthChecker.AddLiveness("ping", health.HTTPGetCheck(
-		fmt.Sprint("http://", viper.GetString("internal.address"), ":", viper.GetString("internal.port"), "/ping"), time.Minute),
+		fmt.Sprint("http://", viper.GetString("server_config.internal_address"), ":", viper.GetString("server_config.internal_port"), "/ping"), time.Minute),
 	)
 
 	s, err := server.NewServer(
@@ -88,22 +94,22 @@ func ServeInternal(logger *logrus.Logger) error {
 	if err != nil {
 		return err
 	}
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("internal.address"), viper.GetString("internal.port")))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("server_config.internal_address"), viper.GetString("server_config.internal_port")))
 	if err != nil {
 		return err
 	}
 
-	logger.Debugf("serving internal http at %q", fmt.Sprintf("%s:%s", viper.GetString("internal.address"), viper.GetString("internal.port")))
+	logger.Debugf("serving internal http at %q", fmt.Sprintf("%s:%s", viper.GetString("server_config.internal_address"), viper.GetString("server_config.internal_port")))
 	return s.Serve(nil, l)
 }
 
 // ServeExternal builds and runs the server that listens on ServerAddress and GatewayAddress
 func ServeExternal(logger *logrus.Logger) error {
 
-	if viper.GetString("database.dsn") == "" {
+	if viper.GetString("database_config.dsn") == "" {
 		setDBConnection()
 	}
-	grpcServer, err := NewGRPCServer(logger, viper.GetString("database.dsn"))
+	grpcServer, err := NewGRPCServer(logger, viper.GetString("database_config.dsn"))
 	if err != nil {
 		logger.Fatalln(err)
 	}
@@ -117,45 +123,42 @@ func ServeExternal(logger *logrus.Logger) error {
 				runtime.WithIncomingHeaderMatcher(gateway.ExtendedDefaultHeaderMatcher(
 					requestid.DefaultRequestIDKey)),
 			),
-			gateway.WithServerAddress(fmt.Sprintf("%s:%s", viper.GetString("server.address"), viper.GetString("server.port"))),
-			gateway.WithEndpointRegistration(viper.GetString("gateway.endpoint"), pikachu_v1.RegisterUserServiceHandlerFromEndpoint),
+			gateway.WithServerAddress(fmt.Sprintf("%s:%s", viper.GetString("server_config.address"), viper.GetString("server_config.port"))),
+			gateway.WithEndpointRegistration(viper.GetString("server_config.gateway_endpoint"), pikachu_v1.RegisterUserServiceHandlerFromEndpoint),
 		),
-		server.WithHandler("/swagger/", NewSwaggerHandler(viper.GetString("gateway.swaggerFile"))),
+		server.WithHandler("/swagger/", NewSwaggerHandler(viper.GetString("server_config.swagger_file"))),
 	)
 	if err != nil {
 		logger.Fatalln(err)
 	}
 
-	grpcL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("server.address"), viper.GetString("server.port")))
+	grpcL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("server_config.address"), viper.GetString("server_config.port")))
 	if err != nil {
 		logger.Fatalln(err)
 	}
 
-	httpL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("gateway.address"), viper.GetString("gateway.port")))
+	httpL, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("server_config.gateway_address"), viper.GetString("server_config.gateway_port")))
 	if err != nil {
 		logger.Fatalln(err)
 	}
 
-	logger.Printf("serving gRPC at %s:%s", viper.GetString("server.address"), viper.GetString("server.port"))
-	logger.Printf("serving http at %s:%s", viper.GetString("gateway.address"), viper.GetString("gateway.port"))
+	logger.Printf("serving gRPC at %s:%s", viper.GetString("server_config.address"), viper.GetString("server_config.port"))
+	logger.Printf("serving http at %s:%s", viper.GetString("server_config.gateway_address"), viper.GetString("server_config.gateway_port"))
 
 	return s.Serve(grpcL, httpL)
 }
 
 func init() {
-	pflag.Parse()
-	viper.BindPFlags(pflag.CommandLine)
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	viper.AddConfigPath(viper.GetString("config.source"))
-	if viper.GetString("config.file") != "" {
-		log.Printf("Serving from configuration file: %s", viper.GetString("config.file"))
-		viper.SetConfigName(viper.GetString("config.file"))
-		if err := viper.ReadInConfig(); err != nil {
-			log.Fatalf("cannot load configuration: %v", err)
-		}
-	} else {
-		log.Printf("Serving from default values, environment variables, and/or flags")
+	err := viper.AddRemoteProvider("consul", "localhost:8850", "pikachu")
+	if err != nil {
+		log.Fatalf("An error %v occurred while fetching config form %v", err, viper.GetString(configProviderKey))
+	}
+	viper.SetConfigType("json") // Need to explicitly set this to json
+	err = viper.ReadRemoteConfig()
+	if err != nil {
+		log.Fatalf("An error %v occurred while reading config", err)
 	}
 	resource.RegisterApplication(viper.GetString("app.id"))
 	resource.SetPlural()
@@ -167,10 +170,10 @@ func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp prot
 }
 
 func dbReady() error {
-	if viper.GetString("database.dsn") == "" {
+	if viper.GetString("database_config.dsn") == "" {
 		setDBConnection()
 	}
-	db, err := sql.Open(viper.GetString("database.type"), viper.GetString("database.dsn"))
+	db, err := sql.Open(viper.GetString("database_config.type"), viper.GetString("database_config.dsn"))
 	if err != nil {
 		return err
 	}
@@ -180,8 +183,8 @@ func dbReady() error {
 
 // setDBConnection sets the db connection string
 func setDBConnection() {
-	viper.Set("database.dsn", fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=%s dbname=%s",
-		viper.GetString("database.address"), viper.GetString("database.port"),
-		viper.GetString("database.user"), viper.GetString("database.password"),
-		viper.GetString("database.ssl"), viper.GetString("database.name")))
+	viper.Set("database_config.dsn", fmt.Sprintf("host=%s port=%s user=%s password=%s sslmode=%s dbname=%s",
+		viper.GetString("database_config.host_name"), viper.GetString("database_config.port"),
+		viper.GetString("database_config.user_name"), viper.GetString("database_config.password"),
+		viper.GetString("database_config.ssl"), viper.GetString("database_config.name")))
 }
