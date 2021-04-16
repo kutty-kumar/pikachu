@@ -1,6 +1,6 @@
 module pikachu
 
-go 1.14
+go 1.13
 
 replace google.golang.org/grpc v1.37.0 => google.golang.org/grpc v1.29.0
 
@@ -18,6 +18,6 @@ require (
 	github.com/spf13/afero v1.4.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.6.1 // indirect
+	github.com/stretchr/testify v1.6.1
 	google.golang.org/grpc v1.37.0
 )

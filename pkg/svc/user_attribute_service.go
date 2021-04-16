@@ -18,7 +18,7 @@ func NewUserAttributeService(baseSvc db_commons.BaseSvc, userAttributeRepository
 	}
 }
 
-func (uas *UserAttributeService) UpdateUserAttribute(userId string, other *domain.UserAttribute) (error, *domain.UserAttribute){
+func (uas *UserAttributeService) UpdateUserAttribute(userId string, other *domain.UserAttribute) (error, *domain.UserAttribute) {
 	return uas.UserAttributeRepo.UpdateUserAttribute(userId, other)
 }
 
@@ -26,8 +26,6 @@ func (uas *UserAttributeService) GetUserAttributesByKey(userId string, attribute
 	return uas.UserAttributeRepo.GetUserAttributeByKey(userId, attributeKey)
 }
 
-func (uas *UserAttributeService) ListUserAttributes(userId string)(error, []domain.UserAttribute){
+func (uas *UserAttributeService) ListUserAttributes(userId string) (error, []domain.UserAttribute) {
 	return uas.UserAttributeRepo.ListUserAttributes(userId)
 }
-
-

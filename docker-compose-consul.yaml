@@ -1,0 +1,31 @@
+version: "3.7"
+services:
+  consul:
+    image: bitnami/consul:latest
+    networks:
+      - dev
+    ports:
+      - '8300:8300'
+      - '8301:8301'
+      - '8301:8301/udp'
+      - '8500:8500'
+      - '8600:8600'
+      - '8600:8600/udp'
+
+  consul_init:
+    image: consul
+    command: |
+      sh -c 'set -uex; \
+        consul kv import -http-addr=http://consul:8500 @/consul/config/default_config.json'
+    volumes:
+      - './default_config.json:/consul/config/default_config.json'
+    networks:
+      - dev
+    depends_on:
+      - consul
+    links:
+      - consul:consul
+
+networks:
+  dev:
+    external: true

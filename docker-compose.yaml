@@ -20,28 +20,6 @@ services:
     networks:
       - dev
 
-  consul:
-    container_name: consul
-    image: consul:latest
-    ports:
-      - "8500:8500"
-      - "8300:8300"
-    volumes:
-      - ./docker/config:/config
-      - ./docker/_data/consul:/data
-    command: agent -server -data-dir=/data -bind 0.0.0.0 -client 0.0.0.0 -bootstrap-expect=1
-    networks:
-      - dev
-
-  consul_init:
-    image: consul
-    command: |
-      sh -c 'set -uex; \
-         consul kv put -http-addr=http://consul:8500 @./default_config.json'
-    volumes:
-      - './default_config.json:/consul/config/basic_config.json'
-    networks:
-      - dev
 
 #  vault:
 #    container_name: vault
@@ -73,14 +51,43 @@ services:
 #      networks:
 #        - dev
 
+  consul:
+    image: bitnami/consul:latest
+    networks:
+      - dev
+    ports:
+      - '8300:8300'
+      - '8301:8301'
+      - '8301:8301/udp'
+      - '8500:8500'
+      - '8600:8600'
+      - '8600:8600/udp'
+
+  consul_init:
+    image: consul
+    command: |
+      sh -c 'set -uex; \
+        consul kv import -http-addr=http://consul:8500 @/consul/config/default_config.json'
+    volumes:
+      - './default_config.json:/consul/config/default_config.json'
+    networks:
+      - dev
+    depends_on:
+      - consul
+    links:
+      - consul:consul
+
   pikachu:
     container_name: pikachu
-    image: pikachu:f1ce796
+    image: pikachu:1d7647b
     restart: unless-stopped
     env_file:
       - env/pikachu.env
     environment:
       - PROM_METRIC_NAME_PREFIX=pikachu_
+      - CONFIG_PROVIDER=consul
+      - CONFIG_PATH=pikachu
+      - CONFIG_ENDPOINT=consul:8500
     command: /bin/server
     ports:
       - "7000:7000"
@@ -88,8 +95,6 @@ services:
       - "7002:7002"
     depends_on:
       - mysql
-      - consul
-      - consul_init
     links:
       - mysql:mysql
       - consul:consul

@@ -57,7 +57,7 @@ func (ir *UserAttributeGORMRepository) ListUserAttributes(userId string) (error,
 	return nil, userAttributes
 }
 
-func (ir *UserAttributeGORMRepository) GetUserAttributeByKey(userId string, attributeKey string) (error, *domain.UserAttribute){
+func (ir *UserAttributeGORMRepository) GetUserAttributeByKey(userId string, attributeKey string) (error, *domain.UserAttribute) {
 	userAttr := domain.UserAttribute{}
 	if err := ir.GetDb().Model(userAttr).Where("user_id = ? AND attribute_key = ?", userId, attributeKey).Find(userAttr).Error; err != nil {
 		return err, nil

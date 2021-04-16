@@ -25,7 +25,7 @@ func (u *UserService) CreateUserAttribute(ctx context.Context, req *pikachu_v1.C
 	if err != nil {
 		return nil, err
 	}
-	return &pikachu_v1.CreateUserAttributeResponse{UserAttribute: userAttr.ToDto().(*pikachu_v1.UserAttributeDto)},nil
+	return &pikachu_v1.CreateUserAttributeResponse{UserAttribute: userAttr.ToDto().(*pikachu_v1.UserAttributeDto)}, nil
 }
 
 func (u *UserService) UpdateUserAttribute(ctx context.Context, req *pikachu_v1.UpdateUserAttributeRequest) (*pikachu_v1.UpdateUserAttributeResponse, error) {
@@ -63,9 +63,8 @@ func (u *UserService) GetUserAttributes(ctx context.Context, req *pikachu_v1.Get
 	for _, attr := range attrs {
 		attrDtos = append(attrDtos, attr.ToDto().(*pikachu_v1.UserAttributeDto))
 	}
-	return &pikachu_v1.GetUserAttributesResponse{UserAttributes: attrDtos},nil
+	return &pikachu_v1.GetUserAttributesResponse{UserAttributes: attrDtos}, nil
 }
-
 
 func NewUserService(base db_commons.BaseSvc, identitySvc IdentityService, userAttributeSvc UserAttributeService) UserService {
 	return UserService{base, identitySvc, userAttributeSvc}
@@ -150,5 +149,3 @@ func (u *UserService) UpdateUserIdentity(ctx context.Context, req *pikachu_v1.Up
 	}
 	return u.IdentityService.UpdateUserIdentity(ctx, req)
 }
-
-

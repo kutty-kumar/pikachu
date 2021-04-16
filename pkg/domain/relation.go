@@ -18,8 +18,7 @@ func (r *Relation) GetName() db_commons.DomainName {
 }
 
 func (r *Relation) ToDto() interface{} {
-	return pikachu_v1.RelationDto{
-	}
+	return pikachu_v1.RelationDto{}
 }
 
 func (r *Relation) FillProperties(dto interface{}) db_commons.Base {

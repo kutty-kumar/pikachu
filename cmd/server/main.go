@@ -95,7 +95,9 @@ func ServeInternal(logger *logrus.Logger) error {
 		return err
 	}
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", viper.GetString("server_config.internal_address"), viper.GetString("server_config.internal_port")))
+	log.Printf("%s:%s", viper.GetString("server_config.internal_address"), viper.GetString("server_config.internal_port"))
 	if err != nil {
+		log.Fatalf("%v", err)
 		return err
 	}
 
@@ -124,9 +126,8 @@ func ServeExternal(logger *logrus.Logger) error {
 					requestid.DefaultRequestIDKey)),
 			),
 			gateway.WithServerAddress(fmt.Sprintf("%s:%s", viper.GetString("server_config.address"), viper.GetString("server_config.port"))),
-			gateway.WithEndpointRegistration(viper.GetString("server_config.gateway_endpoint"), pikachu_v1.RegisterUserServiceHandlerFromEndpoint),
+			gateway.WithEndpointRegistration(viper.GetString("server_config.gateway_url"), pikachu_v1.RegisterUserServiceHandlerFromEndpoint),
 		),
-		server.WithHandler("/swagger/", NewSwaggerHandler(viper.GetString("server_config.swagger_file"))),
 	)
 	if err != nil {
 		logger.Fatalln(err)
@@ -151,7 +152,7 @@ func ServeExternal(logger *logrus.Logger) error {
 func init() {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	err := viper.AddRemoteProvider("consul", "localhost:8850", "pikachu")
+	err := viper.AddRemoteProvider(viper.GetString(configProviderKey), viper.GetString(configSvcEndpointKey), viper.GetString(configPathKey))
 	if err != nil {
 		log.Fatalf("An error %v occurred while fetching config form %v", err, viper.GetString(configProviderKey))
 	}

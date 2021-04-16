@@ -37,7 +37,6 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 				// Request-Id interceptor
 				requestid.UnaryServerInterceptor(),
 
-
 				// Metrics middleware
 				grpc_prometheus.UnaryServerInterceptor,
 
