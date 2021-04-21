@@ -3,25 +3,25 @@ package svc
 import (
 	"context"
 	"errors"
-	"github.com/kutty-kumar/db_commons/model"
+	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
 	"pikachu/pkg/domain"
 )
 
 type UserService struct {
-	db_commons.BaseSvc
+	pkg.BaseSvc
 	IdentityService      IdentityService
 	UserAttributeService UserAttributeService
 }
 
 func (u *UserService) CreateUserAttribute(ctx context.Context, req *pikachu_v1.CreateUserAttributeRequest) (*pikachu_v1.CreateUserAttributeResponse, error) {
-	err, user := u.FindByExternalId(req.UserId)
+	err, user := u.FindByExternalId(ctx, req.UserId)
 	if err != nil || user == nil {
 		return nil, err
 	}
 	userAttribute := domain.UserAttribute{}
 	userAttribute.FillProperties(req.UserAttribute)
-	err, userAttr := u.UserAttributeService.Create(&userAttribute)
+	err, userAttr := u.UserAttributeService.Create(ctx, &userAttribute)
 	if err != nil {
 		return nil, err
 	}
@@ -29,13 +29,13 @@ func (u *UserService) CreateUserAttribute(ctx context.Context, req *pikachu_v1.C
 }
 
 func (u *UserService) UpdateUserAttribute(ctx context.Context, req *pikachu_v1.UpdateUserAttributeRequest) (*pikachu_v1.UpdateUserAttributeResponse, error) {
-	err, user := u.FindByExternalId(req.UserId)
+	err, user := u.FindByExternalId(ctx, req.UserId)
 	if err != nil || user == nil {
 		return nil, err
 	}
 	userAttribute := domain.UserAttribute{}
 	userAttribute.FillProperties(req.UserAttribute)
-	err, userAttr := u.UserAttributeService.UpdateUserAttribute(user.GetExternalId(), &userAttribute)
+	err, userAttr := u.UserAttributeService.UpdateUserAttribute(ctx, user.GetExternalId(), &userAttribute)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (u *UserService) UpdateUserAttribute(ctx context.Context, req *pikachu_v1.U
 }
 
 func (u *UserService) GetUserAttributesByKey(ctx context.Context, req *pikachu_v1.GetUserAttributeByKeyRequest) (*pikachu_v1.GetUserAttributeByKeyResponse, error) {
-	err, attr := u.UserAttributeService.GetUserAttributesByKey(req.UserId, req.AttributeKey)
+	err, attr := u.UserAttributeService.GetUserAttributesByKey(ctx, req.UserId, req.AttributeKey)
 	if err != nil {
 		return nil, err
 	}
@@ -51,11 +51,11 @@ func (u *UserService) GetUserAttributesByKey(ctx context.Context, req *pikachu_v
 }
 
 func (u *UserService) GetUserAttributes(ctx context.Context, req *pikachu_v1.GetUserAttributesRequest) (*pikachu_v1.GetUserAttributesResponse, error) {
-	err, user := u.FindByExternalId(req.UserId)
+	err, user := u.FindByExternalId(ctx, req.UserId)
 	if err != nil {
 		return nil, err
 	}
-	err, attrs := u.UserAttributeService.ListUserAttributes(user.GetExternalId())
+	err, attrs := u.UserAttributeService.ListUserAttributes(ctx, user.GetExternalId())
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (u *UserService) GetUserAttributes(ctx context.Context, req *pikachu_v1.Get
 	return &pikachu_v1.GetUserAttributesResponse{UserAttributes: attrDtos}, nil
 }
 
-func NewUserService(base db_commons.BaseSvc, identitySvc IdentityService, userAttributeSvc UserAttributeService) UserService {
+func NewUserService(base pkg.BaseSvc, identitySvc IdentityService, userAttributeSvc UserAttributeService) UserService {
 	return UserService{base, identitySvc, userAttributeSvc}
 }
 
@@ -76,7 +76,7 @@ func userOperationResponseMapper(dto *pikachu_v1.UserDto) *pikachu_v1.UserOperat
 	}
 }
 
-func (u *UserService) handleError(err error, base db_commons.Base,
+func (u *UserService) handleError(err error, base pkg.Base,
 	responseMapper func(dto *pikachu_v1.UserDto) *pikachu_v1.UserOperationResponse) (*pikachu_v1.UserOperationResponse, error) {
 	if err != nil {
 		return nil, err
@@ -92,24 +92,24 @@ func (u *UserService) getUser(dto pikachu_v1.UserDto) *domain.User {
 
 func (u *UserService) CreateUser(ctx context.Context, req *pikachu_v1.CreateUserRequest) (*pikachu_v1.UserOperationResponse, error) {
 	user := u.getUser(*req.Payload)
-	createdUser, err := u.Create(user)
+	createdUser, err := u.Create(ctx, user)
 	return u.handleError(createdUser, err, userOperationResponseMapper)
 }
 
 func (u *UserService) UpdateUser(ctx context.Context, req *pikachu_v1.UpdateUserRequest) (*pikachu_v1.UserOperationResponse, error) {
 	user := u.getUser(*req.Payload)
-	updatedUser, err := u.Update(req.UserId, user)
+	updatedUser, err := u.Update(ctx, req.UserId, user)
 	return u.handleError(updatedUser, err, userOperationResponseMapper)
 }
 
 func (u *UserService) GetUserByExternalId(ctx context.Context, req *pikachu_v1.GetUserByExternalIdRequest) (*pikachu_v1.UserOperationResponse, error) {
-	user, err := u.FindByExternalId(req.UserId)
+	user, err := u.FindByExternalId(ctx, req.UserId)
 	return u.handleError(user, err, userOperationResponseMapper)
 }
 
 func (u *UserService) MultiGetUsersByExternalId(ctx context.Context, req *pikachu_v1.MultiGetUsersByExternalIdRequest) (*pikachu_v1.MultiGetUsersResponse, error) {
 	if len(req.UserIds) > 0 {
-		err, userSlice := u.MultiGetByExternalId(req.UserIds)
+		err, userSlice := u.MultiGetByExternalId(ctx, req.UserIds)
 		if err != nil {
 			return nil, err
 		}
@@ -125,12 +125,12 @@ func (u *UserService) MultiGetUsersByExternalId(ctx context.Context, req *pikach
 func (u *UserService) CreateUserIdentity(ctx context.Context, req *pikachu_v1.CreateUserIdentityRequest) (*pikachu_v1.CreateUserIdentityResponse, error) {
 	uIdentity := domain.Identity{}
 	uIdentity = *interface{}(uIdentity.FillProperties(*req.Payload)).(*domain.Identity)
-	err, user := u.FindByExternalId(req.UserId)
+	err, user := u.FindByExternalId(ctx, req.UserId)
 	if err != nil || user == nil {
 		return nil, err
 	}
 	uIdentity.UserID = user.GetExternalId()
-	err, identity := u.IdentityService.Create(&uIdentity)
+	err, identity := u.IdentityService.Create(ctx, &uIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func (u *UserService) GetUserIdentities(ctx context.Context, req *pikachu_v1.Get
 }
 
 func (u *UserService) UpdateUserIdentity(ctx context.Context, req *pikachu_v1.UpdateUserIdentityRequest) (*pikachu_v1.UpdateUserIdentityResponse, error) {
-	err, user := u.FindByExternalId(req.UserId)
+	err, user := u.FindByExternalId(ctx, req.UserId)
 	if err != nil || user == nil {
 		return nil, err
 	}

@@ -1,29 +1,30 @@
 package repository
 
 import (
-	"github.com/kutty-kumar/db_commons/model"
+	"context"
+	"github.com/kutty-kumar/charminder/pkg"
 	"pikachu/pkg/domain"
 )
 
 type AddressGORMRepository struct {
-	db_commons.BaseRepository
+	pkg.BaseRepository
 }
 
-func (ar *AddressGORMRepository) CreateUserAddress(userId string, address *domain.Address) (error, *domain.Address) {
-	err, user := ar.GetByExternalId(userId)
+func (ar *AddressGORMRepository) CreateUserAddress(ctx context.Context, userId string, address *domain.Address) (error, *domain.Address) {
+	err, user := ar.GetByExternalId(ctx, userId)
 	if err != nil {
 		return err, nil
 	}
 	address.UserID = user.GetExternalId()
-	err, bAddress := ar.Create(address)
+	err, bAddress := ar.Create(ctx, address)
 	if err != nil {
 		return err, nil
 	}
 	return nil, bAddress.(*domain.Address)
 }
 
-func (ar *AddressGORMRepository) UpdateUserAddress(userId string, addressId string, address *domain.Address) (error, *domain.Address) {
-	err, user := ar.GetByExternalId(userId)
+func (ar *AddressGORMRepository) UpdateUserAddress(ctx context.Context, userId string, addressId string, address *domain.Address) (error, *domain.Address) {
+	err, user := ar.GetByExternalId(ctx, userId)
 	if err != nil {
 		return err, nil
 	}
@@ -32,20 +33,20 @@ func (ar *AddressGORMRepository) UpdateUserAddress(userId string, addressId stri
 		return err, nil
 	}
 	eAddress.Merge(address)
-	err, uAddress := ar.Update(addressId, &eAddress)
+	err, uAddress := ar.Update(ctx, addressId, &eAddress)
 	if err != nil {
 		return err, nil
 	}
 	return nil, interface{}(uAddress).(*domain.Address)
 }
 
-func (ar *AddressGORMRepository) ListUserAddresses(userId string) (error, []*domain.Address) {
+func (ar *AddressGORMRepository) ListUserAddresses(ctx context.Context, userId string) (error, []*domain.Address) {
 	addresses := make([]*domain.Address, 0)
-	err, user := ar.GetByExternalId(userId)
+	err, user := ar.GetByExternalId(ctx, userId)
 	if err != nil {
 		return err, nil
 	}
-	if err := ar.GetDb().Model(user).Related(&addresses).Error; err != nil {
+	if err := ar.GetDb().WithContext(ctx).Model(user).Association("Address").Find(&addresses); err != nil {
 		return err, nil
 	}
 	return nil, addresses

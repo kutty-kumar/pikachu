@@ -1,45 +1,41 @@
 package repository
 
 import (
+	"context"
 	"errors"
-	"github.com/kutty-kumar/db_commons/model"
+	"github.com/kutty-kumar/charminder/pkg"
 	"pikachu/pkg/domain"
 )
 
 type UserGormRepository struct {
-	db_commons.BaseDao
+	pkg.BaseDao
 }
 
-func NewUserGormRepository(dao db_commons.BaseDao) UserGormRepository {
+func NewUserGormRepository(dao pkg.BaseDao) UserGormRepository {
 	return UserGormRepository{
 		dao,
 	}
 }
 
-func (u *UserGormRepository) Create(user *domain.User) (error, *domain.User) {
-	err, base := u.Create(user)
-	return err, interface{}(base).(*domain.User)
+func (u *UserGormRepository) Create(ctx context.Context, user *domain.User) (error, *domain.User) {
+	return u.Create(ctx, user)
 }
 
-func (u *UserGormRepository) Update(id string, user *domain.User) (error, *domain.User) {
-	err, base := u.Update(id, user)
-	if err != nil {
-		return err, nil
-	}
-	return err, interface{}(base).(*domain.User)
+func (u *UserGormRepository) Update(ctx context.Context, id string, user *domain.User) (error, *domain.User) {
+	return u.Update(ctx, id, user)
 }
 
-func (u *UserGormRepository) FindByExternalId(id string) (error, *domain.User) {
-	err, base := u.GetByExternalId(id)
+func (u *UserGormRepository) FindByExternalId(ctx context.Context, id string) (error, *domain.User) {
+	err, base := u.GetByExternalId(ctx, id)
 	if base != nil {
 		return err, base.(*domain.User)
 	}
 	return errors.New("not found"), nil
 }
 
-func (u *UserGormRepository) MultiGetByExternalIds(ids []string) (error, []domain.User) {
+func (u *UserGormRepository) MultiGetByExternalIds(ctx context.Context, ids []string) (error, []domain.User) {
 	var userSlice []domain.User
-	err, sqlSlice := u.MultiGetByExternalId(ids)
+	err, sqlSlice := u.MultiGetByExternalId(ctx, ids)
 	if err != nil {
 		return err, nil
 	}

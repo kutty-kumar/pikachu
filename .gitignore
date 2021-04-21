@@ -8,3 +8,4 @@ vendor/
 *.iml
 .DS_STORE/
 docker/db/data
+docker/_data

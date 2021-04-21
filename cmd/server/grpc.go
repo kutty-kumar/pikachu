@@ -7,19 +7,42 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/infobloxopen/atlas-app-toolkit/gateway"
 	"github.com/infobloxopen/atlas-app-toolkit/requestid"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	"github.com/kutty-kumar/db_commons/model"
+	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	gLogger "gorm.io/gorm/logger"
+	"log"
+	"os"
 	"pikachu/pkg/domain"
 	r "pikachu/pkg/repository"
 	"pikachu/pkg/svc"
 	"time"
 )
+
+var (
+	reg = prometheus.NewRegistry()
+	grpcMetrics = grpc_prometheus.NewServerMetrics()
+	createUserSuccessMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "user_service_create_user_success_count",
+		Help: "total number of successful invocations of create user method in user service",
+	}, []string{"create_user_success_count"})
+	createUserFailureMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "user_service_create_user_failure_count",
+		Help: "total number of failure invocations of create user method in user service",
+	}, []string{"create_user_failure_count"})
+)
+
+func init(){
+	reg.MustRegister(grpcMetrics, createUserSuccessMetric, createUserFailureMetric)
+	createUserSuccessMetric.WithLabelValues("user_service")
+	createUserFailureMetric.WithLabelValues("user_service")
+}
 
 func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Server, error) {
 	grpcServer := grpc.NewServer(
@@ -49,52 +72,61 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 		),
 	)
 
-	// create new postgres database
-	db, err := gorm.Open(viper.GetString("database_config.type"), dbConnectionString)
-	db.LogMode(true)
+
+	dbLogger := gLogger.New(
+		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
+		gLogger.Config{
+			SlowThreshold:              time.Second,   // Slow SQL threshold
+			LogLevel:                   gLogger.Info, // Log level
+			IgnoreRecordNotFoundError: true,           // Ignore ErrRecordNotFound error for logger
+			Colorful:                  false,          // Disable color
+		},
+	)
+	// create new mysql database connection
+	db, err := gorm.Open(mysql.Open(viper.GetString("database_config.dsn")), &gorm.Config{Logger: dbLogger})
 	if err != nil {
 		return nil, err
 	}
 
 	//dropTables(db)
-	//createTables(db)
+	createTables(db)
 
-	domainFactory := db_commons.NewDomainFactory()
-	domainFactory.RegisterMapping("user", func() db_commons.Base {
+	domainFactory := pkg.NewDomainFactory()
+	domainFactory.RegisterMapping("user", func() pkg.Base {
 		return &domain.User{}
 	})
-	domainFactory.RegisterMapping("identity", func() db_commons.Base {
+	domainFactory.RegisterMapping("identity", func() pkg.Base {
 		return &domain.Identity{}
 	})
 
-	externalIdSetter := func(externalId string, base db_commons.Base) db_commons.Base {
+	externalIdSetter := func(externalId string, base pkg.Base) pkg.Base {
 		base.SetExternalId(externalId)
 		return base
 	}
-	userBaseDao := db_commons.NewBaseGORMDao(db, domainFactory.GetMapping("user"), externalIdSetter)
+	setterOption := pkg.WithExternalIdSetter(externalIdSetter)
+	dbOption := pkg.WithDb(db)
+	userBaseDao := pkg.NewBaseGORMDao(setterOption, pkg.WithCreator(domainFactory.GetMapping("user")), dbOption)
 
-	identityBaseDao := db_commons.NewBaseGORMDao(db, domainFactory.GetMapping("identity"), externalIdSetter)
-	userAttributeBaseDao := db_commons.NewBaseGORMDao(db, domainFactory.GetMapping("user_attributes"), externalIdSetter)
+	identityBaseDao := pkg.NewBaseGORMDao(dbOption, pkg.WithCreator(domainFactory.GetMapping("identity")), setterOption)
+	userAttributeBaseDao := pkg.NewBaseGORMDao(dbOption, pkg.WithCreator(domainFactory.GetMapping("user_attributes")), setterOption)
 	identityRepository := r.NewIdentityGormRepository(identityBaseDao)
 	userAttributeRepository := r.NewUserAttributeGormRepository(userAttributeBaseDao)
 	// register service implementation with the grpcServer
-	userBaseSvc := db_commons.NewBaseSvc(userBaseDao)
-	identityBaseSvc := db_commons.NewBaseSvc(identityBaseDao)
-	userAttributeBaseSvc := db_commons.NewBaseSvc(userAttributeBaseDao)
+	userBaseSvc := pkg.NewBaseSvc(userBaseDao)
+	identityBaseSvc := pkg.NewBaseSvc(identityBaseDao)
+	userAttributeBaseSvc := pkg.NewBaseSvc(userAttributeBaseDao)
 	identityService := svc.NewIdentityService(identityBaseSvc, &identityRepository)
 	userAttributeService := svc.NewUserAttributeService(userAttributeBaseSvc, &userAttributeRepository)
 	userService := svc.NewUserService(userBaseSvc, identityService, userAttributeService)
 
 	pikachu_v1.RegisterUserServiceServer(grpcServer, &userService)
+	grpcMetrics.InitializeMetrics(grpcServer)
 	return grpcServer, nil
 }
 
 func createTables(db *gorm.DB) {
-	db.CreateTable(domain.User{})
-	db.CreateTable(domain.Identity{}).AddForeignKey("user_id", "users(external_id)", "CASCADE", "CASCADE")
-	db.CreateTable(domain.Address{}).AddForeignKey("user_id", "users(external_id)", "CASCADE", "CASCADE")
-}
-
-func dropTables(db *gorm.DB) {
-	db.DropTableIfExists(domain.Identity{}, domain.Address{}, domain.User{})
+	err := db.AutoMigrate(domain.User{}, domain.Identity{}, domain.Relation{}, domain.UserAttribute{})
+	if err != nil {
+		log.Fatalf("An error %v occurred while automigrating", err)
+	}
 }

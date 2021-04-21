@@ -1,32 +1,54 @@
 package domain
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/golang/protobuf/ptypes"
-	"github.com/kutty-kumar/db_commons/model"
+	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/core_v1"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
 	"time"
 )
 
 type User struct {
-	db_commons.BaseDomain
+	pkg.BaseDomain
 	FirstName      string
 	LastName       string
 	Gender         core_v1.Gender
 	DateOfBirth    time.Time
-	Identities     []Identity      `gorm:"foreignkey:UserID;association_foreignkey:ExternalId"`
-	Addresses      []Address       `gorm:"foreignkey:UserID;association_foreignkey:ExternalId"`
-	Relations      []Relation      `gorm:"foreignkey:UserID;association_foreignkey:ExternalId"`
-	UserAttributes []UserAttribute `gorm:"foreignkey:UserID;association_foreignkey:ExternalId"`
+	Identities     []Identity      `gorm:"foreignKey:UserID;references:ExternalId"`
+	Addresses      []Address       `gorm:"foreignKey:UserID;references:ExternalId"`
+	Relations      []Relation      `gorm:"foreignKey:UserID;references:ExternalId;foreignKey:RelationID;references:ExternalId"`
+	UserAttributes []UserAttribute `gorm:"foreignKey:UserID;references:ExternalId"`
 	Age            int64
 	Height         float64
 	Weight         float64
 }
 
-func (u *User) GetName() db_commons.DomainName {
+func (u *User) ToBytes() (*bytes.Buffer, error) {
+	var rBytes bytes.Buffer
+	enc := gob.NewEncoder(&rBytes)
+	err := enc.Encode(*u)
+	return &rBytes, err
+}
+
+func (u *User) ToJson() (string, error) {
+	rBytes, err := json.Marshal(*u)
+	if err != nil {
+		return "{}", err
+	}
+	return string(rBytes), nil
+}
+
+func (u *User) String() string {
+	return fmt.Sprintf("{\"first_name\": %v, \"last_name\": %v, \"age\": %v, \"gender\": %v, \"date_of_birth\": %v, \"status\": %v, \"height\": %v}", u.FirstName, u.LastName, u.Age, u.Gender, u.DateOfBirth, u.Status, u.Height)
+}
+
+func (u *User) GetName() pkg.DomainName {
 	return "users"
 }
 
@@ -44,7 +66,7 @@ func (u *User) ToDto() interface{} {
 	}
 }
 
-func (u *User) FillProperties(dto interface{}) db_commons.Base {
+func (u *User) FillProperties(dto interface{}) pkg.Base {
 	userDto := dto.(pikachu_v1.UserDto)
 	u.FirstName = userDto.FirstName
 	u.LastName = userDto.LastName
@@ -79,7 +101,7 @@ func (u *User) Merge(other interface{}) {
 	}
 }
 
-func (u *User) FromSqlRow(rows *sql.Rows) (db_commons.Base, error) {
+func (u *User) FromSqlRow(rows *sql.Rows) (pkg.Base, error) {
 	err := rows.Scan(&u.ExternalId, &u.Id, &u.CreatedAt, &u.UpdatedAt, &u.DeletedAt, &u.Status, &u.FirstName,
 		&u.LastName, &u.Gender, &u.DateOfBirth, &u.Age, &u.Height, &u.Weight)
 	return u, err

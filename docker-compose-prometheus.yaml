@@ -1,0 +1,12 @@
+version: "3.7"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.21.0
+    ports:
+      - 9000:9090
+    user: "1000:1000"
+    volumes:
+      - './docker/prometheus:/etc/prometheus'
+      - './docker/_data/prometheus:/prometheus'
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yaml

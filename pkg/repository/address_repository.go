@@ -1,11 +1,12 @@
 package repository
 
 import (
+	"context"
 	"pikachu/pkg/domain"
 )
 
 type AddressRepository interface {
-	CreateUserAddress(userId string, address *domain.Address) (error, *domain.Address)
-	UpdateUserAddress(userId string, addressId string, address *domain.Address) (error, *domain.Address)
-	ListUserAddresses(userId string) (error, []*domain.Address)
+	CreateUserAddress(ctx context.Context, userId string, address *domain.Address) (error, *domain.Address)
+	UpdateUserAddress(ctx context.Context, userId string, addressId string, address *domain.Address) (error, *domain.Address)
+	ListUserAddresses(ctx context.Context, userId string) (error, []*domain.Address)
 }
