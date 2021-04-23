@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	reg = prometheus.NewRegistry()
-	grpcMetrics = grpc_prometheus.NewServerMetrics()
+	reg                     = prometheus.NewRegistry()
+	grpcMetrics             = grpc_prometheus.NewServerMetrics()
 	createUserSuccessMetric = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "user_service_create_user_success_count",
 		Help: "total number of successful invocations of create user method in user service",
@@ -38,7 +38,7 @@ var (
 	}, []string{"create_user_failure_count"})
 )
 
-func init(){
+func init() {
 	reg.MustRegister(grpcMetrics, createUserSuccessMetric, createUserFailureMetric)
 	createUserSuccessMetric.WithLabelValues("user_service")
 	createUserFailureMetric.WithLabelValues("user_service")
@@ -72,14 +72,13 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 		),
 	)
 
-
 	dbLogger := gLogger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		gLogger.Config{
-			SlowThreshold:              time.Second,   // Slow SQL threshold
-			LogLevel:                   gLogger.Info, // Log level
-			IgnoreRecordNotFoundError: true,           // Ignore ErrRecordNotFound error for logger
-			Colorful:                  false,          // Disable color
+			SlowThreshold:             time.Second,  // Slow SQL threshold
+			LogLevel:                  gLogger.Info, // Log level
+			IgnoreRecordNotFoundError: true,         // Ignore ErrRecordNotFound error for logger
+			Colorful:                  false,        // Disable color
 		},
 	)
 	// create new mysql database connection
@@ -88,7 +87,7 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 		return nil, err
 	}
 
-	//dropTables(db)
+	dropTables(db)
 	createTables(db)
 
 	domainFactory := pkg.NewDomainFactory()

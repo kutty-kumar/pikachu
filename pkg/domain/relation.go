@@ -44,7 +44,7 @@ func (r *Relation) GetName() pkg.DomainName {
 func (r *Relation) ToDto() interface{} {
 	return pikachu_v1.RelationDto{
 		// TODO add relation id
-		UserId: r.UserID,
+		UserId:   r.UserID,
 		Relation: r.RelationType,
 	}
 }
@@ -64,7 +64,7 @@ func (r *Relation) Merge(other interface{}) {
 }
 
 func (r *Relation) FromSqlRow(rows *sql.Rows) (pkg.Base, error) {
-	for rows.Next(){
+	for rows.Next() {
 		err := rows.Scan(&r.ExternalId, &r.RelationID, &r.UserID, &r.RelationType)
 		if err != nil {
 			return nil, err
