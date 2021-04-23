@@ -4,10 +4,62 @@ import (
 	"context"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
+	"gorm.io/gorm"
 	"pikachu/pkg/domain"
 	"reflect"
 	"testing"
 )
+
+type InMemoryBaseRepositoryForUser struct {
+}
+
+func (ur *InMemoryBaseRepositoryForUser) GetById(ctx context.Context, id uint64) (error, pkg.Base) {
+	return nil, &domain.User{
+		FirstName: "test-first-name",
+		LastName:  "test-last-name",
+		Age:       100,
+	}
+}
+
+func (ur *InMemoryBaseRepositoryForUser) GetByExternalId(ctx context.Context, externalId string) (error, pkg.Base) {
+	return nil, &domain.User{
+		FirstName: "test-first-name",
+		LastName:  "test-last-name",
+		Age:       100,
+	}
+}
+
+func (ur *InMemoryBaseRepositoryForUser) MultiGetByExternalId(ctx context.Context, externalIds []string) (error, []pkg.Base) {
+	return nil, []pkg.Base{&domain.User{
+		FirstName: "test-first-name",
+		LastName:  "test-last-name",
+		Age:       100,
+	}}
+}
+
+func (ur *InMemoryBaseRepositoryForUser) Create(ctx context.Context, base pkg.Base) (error, pkg.Base) {
+	return nil, &domain.User{
+		FirstName: "test-first-name",
+		LastName:  "test-last-name",
+		Age:       100,
+	}
+}
+
+func (ur *InMemoryBaseRepositoryForUser) Update(ctx context.Context, externalId string, updatedBase pkg.Base) (error, pkg.Base) {
+	return nil, &domain.User{
+		FirstName: "test-first-name-update",
+		LastName:  "test-last-name-update",
+		Age:       100,
+	}
+}
+
+func (ur *InMemoryBaseRepositoryForUser) Search(ctx context.Context, params map[string]string) (error, []pkg.Base) {
+	panic("implement me")
+}
+
+func (ur *InMemoryBaseRepositoryForUser) GetDb() *gorm.DB {
+	return nil
+}
 
 func TestUserService_CreateUserAttribute(t *testing.T) {
 	type fields struct {
@@ -25,9 +77,7 @@ func TestUserService_CreateUserAttribute(t *testing.T) {
 		args    args
 		want    *pikachu_v1.CreateUserAttributeResponse
 		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &UserService{
@@ -256,9 +306,7 @@ func TestUserService_getUser(t *testing.T) {
 		fields fields
 		args   args
 		want   *domain.User
-	}{
-		// TODO: Add test cases.
-	}
+	}{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &UserService{
@@ -366,7 +414,16 @@ func TestUserService_GetUserByExternalId(t *testing.T) {
 		want    *pikachu_v1.UserOperationResponse
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "test_get_user_successful",
+			fields: fields{
+				BaseSvc: pkg.NewBaseSvc(&InMemoryBaseRepositoryForUser{}),
+			},
+			args: args{
+				req: &pikachu_v1.GetUserByExternalIdRequest{UserId: "abcd"},
+			},
+			want: &pikachu_v1.UserOperationResponse{Response: &pikachu_v1.UserDto{FirstName: "test-first-name", LastName: "test-last-name", Age: 100}},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -380,7 +437,8 @@ func TestUserService_GetUserByExternalId(t *testing.T) {
 				t.Errorf("UserService.GetUserByExternalId() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+
+			if got.Response.FirstName != tt.want.Response.FirstName || got.Response.LastName != tt.want.Response.LastName || got.Response.Age != tt.want.Response.Age {
 				t.Errorf("UserService.GetUserByExternalId() = %v, want %v", got, tt.want)
 			}
 		})
