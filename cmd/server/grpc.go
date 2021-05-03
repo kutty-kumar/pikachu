@@ -87,7 +87,6 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 		return nil, err
 	}
 
-	dropTables(db)
 	createTables(db)
 
 	domainFactory := pkg.NewDomainFactory()
