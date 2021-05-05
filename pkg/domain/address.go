@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
 )
@@ -18,6 +19,21 @@ type Address struct {
 	State   string
 	Country string
 	UserID  string `gorm:"type:varchar(100)"`
+}
+
+func (a *Address) MarshalBinary() ([]byte, error) {
+	dto := a.ToDto().(pikachu_v1.AddressDto)
+	return proto.Marshal(&dto)
+}
+
+func (a *Address) UnmarshalBinary(buffer []byte) error {
+	dto := pikachu_v1.AddressDto{}
+	err := proto.Unmarshal(buffer, &dto)
+	if err != nil {
+		return err
+	}
+	a.FillProperties(dto)
+	return nil
 }
 
 func (a *Address) ToBytes() (*bytes.Buffer, error) {

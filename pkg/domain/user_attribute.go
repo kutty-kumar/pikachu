@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
 )
@@ -15,6 +16,20 @@ type UserAttribute struct {
 	AttributeKey   string
 	AttributeValue string
 	UserID         string `gorm:"type:varchar(100)"`
+}
+
+func (i *UserAttribute) MarshalBinary() ([]byte, error) {
+	dto := i.ToDto().(pikachu_v1.UserAttributeDto)
+	return proto.Marshal(&dto)}
+
+func (i *UserAttribute) UnmarshalBinary(buffer []byte) error {
+	dto := pikachu_v1.UserAttributeDto{}
+	err := proto.Unmarshal(buffer, &dto)
+	if err != nil {
+		return err
+	}
+	i.FillProperties(dto)
+	return nil
 }
 
 func (i *UserAttribute) ToBytes() (*bytes.Buffer, error) {

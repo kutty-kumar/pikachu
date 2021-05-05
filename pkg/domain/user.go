@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/core_v1"
@@ -27,8 +28,23 @@ type User struct {
 	Age            int64
 	Height         float64
 	Weight         float64
+	Password       string
 }
 
+func (u *User) MarshalBinary() ([]byte, error) {
+	dto := u.ToDto().(pikachu_v1.UserDto)
+	return proto.Marshal(&dto)
+}
+
+func (u *User) UnmarshalBinary(buffer []byte) error {
+	dto := pikachu_v1.UserDto{}
+	err := proto.Unmarshal(buffer, &dto)
+	if err != nil {
+		return err
+	}
+	u.FillProperties(dto)
+	return nil
+}
 func (u *User) ToBytes() (*bytes.Buffer, error) {
 	var rBytes bytes.Buffer
 	enc := gob.NewEncoder(&rBytes)
@@ -76,6 +92,7 @@ func (u *User) FillProperties(dto interface{}) pkg.Base {
 	u.Height = userDto.Height
 	u.Weight = userDto.Weight
 	u.DeletedAt = nil
+	u.Password = userDto.Password
 	return u
 }
 

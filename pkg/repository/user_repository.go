@@ -2,12 +2,11 @@ package repository
 
 import (
 	"context"
+	"github.com/kutty-kumar/charminder/pkg"
 	"pikachu/pkg/domain"
 )
 
 type UserRepository interface {
-	Create(ctx context.Context, user *domain.User) (error, *domain.User)
-	Update(ctx context.Context, id string, user *domain.User) (error, *domain.User)
-	FindByExternalId(ctx context.Context, id string) (error, *domain.User)
-	MultiGetByExternalIds(ctx context.Context, ids []string) (error, []domain.User)
+	pkg.BaseRepository
+	GetUserByEmailPassword(ctx context.Context, email string, password string) (*domain.User, error)
 }

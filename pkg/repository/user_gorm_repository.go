@@ -8,47 +8,22 @@ import (
 )
 
 type UserGormRepository struct {
-	pkg.BaseDao
+	pkg.BaseRepository
 }
 
-func NewUserGormRepository(dao pkg.BaseDao) UserGormRepository {
+func NewUserGormRepository(repo pkg.BaseRepository) UserGormRepository {
 	return UserGormRepository{
-		dao,
+		repo,
 	}
 }
-
-func (u *UserGormRepository) Create(ctx context.Context, user *domain.User) (error, *domain.User) {
-	return u.Create(ctx, user)
-}
-
-func (u *UserGormRepository) Update(ctx context.Context, id string, user *domain.User) (error, *domain.User) {
-	return u.Update(ctx, id, user)
-}
-
-func (u *UserGormRepository) FindByExternalId(ctx context.Context, id string) (error, *domain.User) {
-	err, base := u.GetByExternalId(ctx, id)
-	if base != nil {
-		return err, base.(*domain.User)
+func (ugr *UserGormRepository) GetUserByEmailPassword(ctx context.Context, email string, password string) (*domain.User, error) {
+	user := domain.User{}
+	if err := ugr.GetDb().Model(&user).WithContext(ctx).Joins("INNER JOIN identities ON identities.user_id=users.external_id").Where("identities.identity_type=2 AND identities.identity_value = ? AND users.password = ?", email, password).Find(&user).Error; err != nil {
+		return nil, err
 	}
-	return errors.New("not found"), nil
-}
+	if user.Id == 0 {
+		return nil, errors.New("user not found")
 
-func (u *UserGormRepository) MultiGetByExternalIds(ctx context.Context, ids []string) (error, []domain.User) {
-	var userSlice []domain.User
-	err, sqlSlice := u.MultiGetByExternalId(ctx, ids)
-	if err != nil {
-		return err, nil
 	}
-
-	for _, sqlRow := range sqlSlice {
-		userSlice = append(userSlice, *interface{}(sqlRow).(*domain.User))
-	}
-	return nil, userSlice
-}
-
-func (u *UserGormRepository) handleError(user *domain.User, err error) (error, *domain.User) {
-	if err != nil {
-		return err, nil
-	}
-	return nil, user
+	return &user, nil
 }

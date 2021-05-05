@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/core_v1"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
@@ -16,6 +17,21 @@ type Relation struct {
 	RelationType core_v1.Relation
 	RelationID   string `gorm:"type:varchar(100)"`
 	UserID       string `gorm:"type:varchar(100)"`
+}
+
+func (r *Relation) MarshalBinary() ([]byte, error) {
+	dto := r.ToDto().(pikachu_v1.RelationDto)
+	return proto.Marshal(&dto)
+}
+
+func (r *Relation) UnmarshalBinary(buffer []byte) error {
+	dto := pikachu_v1.RelationDto{}
+	err := proto.Unmarshal(buffer, &dto)
+	if err != nil {
+		return err
+	}
+	r.FillProperties(dto)
+	return nil
 }
 
 func (r *Relation) ToBytes() (*bytes.Buffer, error) {

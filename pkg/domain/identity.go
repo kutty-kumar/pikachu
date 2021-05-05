@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/kutty-kumar/charminder/pkg"
 	"github.com/kutty-kumar/ho_oh/core_v1"
 	"github.com/kutty-kumar/ho_oh/pikachu_v1"
@@ -16,6 +17,21 @@ type Identity struct {
 	IdentityType  core_v1.IdentityType
 	IdentityValue string
 	UserID        string `gorm:"type:varchar(100)"`
+}
+
+func (i *Identity) MarshalBinary() ([]byte, error) {
+	dto := i.ToDto().(pikachu_v1.IdentityDto)
+	return proto.Marshal(&dto)
+}
+
+func (i *Identity) UnmarshalBinary(buffer []byte) error {
+	dto := pikachu_v1.IdentityDto{}
+	err := proto.Unmarshal(buffer, &dto)
+	if err != nil {
+		return err
+	}
+	i.FillProperties(dto)
+	return nil
 }
 
 func (i *Identity) ToBytes() (*bytes.Buffer, error) {

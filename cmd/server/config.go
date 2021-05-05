@@ -52,6 +52,10 @@ type HeartBeatConfig struct {
 	KeepAliveTimeOut uint64
 }
 
+type EncryptionConfig struct {
+	SecretKey string `json:"secret_key"`
+}
+
 type ServerConfig struct {
 	Address           string
 	Port              string
@@ -67,8 +71,9 @@ type ServerConfig struct {
 }
 
 type PikachuConfig struct {
-	DatabaseConfig  DatabaseConfig
-	LoggingConfig   LoggingConfig
-	HeartBeatConfig HeartBeatConfig
-	ServerConfig    ServerConfig
+	DatabaseConfig   DatabaseConfig
+	LoggingConfig    LoggingConfig
+	HeartBeatConfig  HeartBeatConfig
+	ServerConfig     ServerConfig
+	EncryptionConfig EncryptionConfig
 }

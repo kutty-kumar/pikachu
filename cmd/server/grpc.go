@@ -110,12 +110,12 @@ func NewGRPCServer(logger *logrus.Logger, dbConnectionString string) (*grpc.Serv
 	identityRepository := r.NewIdentityGormRepository(identityBaseDao)
 	userAttributeRepository := r.NewUserAttributeGormRepository(userAttributeBaseDao)
 	// register service implementation with the grpcServer
-	userBaseSvc := pkg.NewBaseSvc(userBaseDao)
+	userGormRepo := r.NewUserGormRepository(userBaseDao)
 	identityBaseSvc := pkg.NewBaseSvc(identityBaseDao)
 	userAttributeBaseSvc := pkg.NewBaseSvc(userAttributeBaseDao)
 	identityService := svc.NewIdentityService(identityBaseSvc, &identityRepository)
 	userAttributeService := svc.NewUserAttributeService(userAttributeBaseSvc, &userAttributeRepository)
-	userService := svc.NewUserService(userBaseSvc, identityService, userAttributeService)
+	userService := svc.NewUserService(&userGormRepo, identityService, userAttributeService)
 
 	pikachu_v1.RegisterUserServiceServer(grpcServer, &userService)
 	grpcMetrics.InitializeMetrics(grpcServer)
