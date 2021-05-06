@@ -170,6 +170,7 @@ func forwardResponseOption(ctx context.Context, w http.ResponseWriter, resp prot
 	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS, PATCH")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	return nil
 }
@@ -178,6 +179,7 @@ func defaultProtoErrorHandler(ctx context.Context, sMux *runtime.ServeMux, marsh
 	w.Header().Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, HEAD, OPTIONS, PATCH")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 }
 
